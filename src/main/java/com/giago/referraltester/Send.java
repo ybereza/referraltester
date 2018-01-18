@@ -1,19 +1,33 @@
 package com.giago.referraltester;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import org.w3c.dom.Text;
 
 public class Send extends BaseActivity {
 	
@@ -25,6 +39,7 @@ public class Send extends BaseActivity {
 	private EditText campaignTerm;
 	private EditText campaignContent;
 	private EditText campaignName;
+	private EditText customRef;
 	private Map<String, String> properties;
 	
 	public static final Intent getIntent(Context context, String  referralUrl) {
@@ -53,6 +68,7 @@ public class Send extends BaseActivity {
         campaignTerm = (EditText)findViewById(R.id.campaign_term);
         campaignContent = (EditText)findViewById(R.id.campaign_content);
         campaignName = (EditText)findViewById(R.id.campaign_name);
+		customRef = (EditText)findViewById(R.id.custom);
         
         String referralUrl = getReferralUrl(getIntent());
     	if(!TextUtils.isEmpty(referralUrl)) {
@@ -81,24 +97,35 @@ public class Send extends BaseActivity {
     }
     
     private void sendBroadcastIntent() {
-    	Intent i = new Intent("com.android.vending.INSTALL_REFERRER");
-    	String id = getId();
-    	if(checkId(id)) {
-    		return;
-    	}
-    	i.setPackage(id);
-    	String referrer = generateReferrer();
-    	if(checkfield(referrer, "utm_source")) {
-    		return;
-    	}
-    	if(checkfield(referrer, "utm_medium")) {
-    		return;
-    	}
-    	if(checkfield(referrer, "utm_campaign")) {
-    		return;
-    	}
-    	i.putExtra("referrer", referrer);
-    	sendBroadcast(i);
+		Intent i = new Intent("com.android.vending.INSTALL_REFERRER");
+		String id = getId();
+		if(checkId(id))
+			return;
+
+		i.setPackage(id);
+		String referrer = generateReferrer();
+		i.putExtra("referrer", referrer);
+
+		TextView tv=(TextView)findViewById(R.id.status_info);
+		tv.setText("Referrer string is "+referrer+"\n");
+		PackageManager pm=getPackageManager();
+		List<ResolveInfo> receivers=pm.queryBroadcastReceivers(i, 0);
+		if(receivers==null || receivers.size()==0) {
+			tv.append(">>> No broadcast receivers found! Nothing is likely to happen\n");
+		} else {
+			tv.append(String.format("%d receivers found.", receivers.size()));
+			for(ResolveInfo ri : receivers) {
+				tv.append(String.format("Package: %s  Class: %s  Exported: %s  Enabled: %s\n", ri.activityInfo.packageName,
+						ri.activityInfo.name, ri.activityInfo.exported, ri.activityInfo.enabled));
+			}
+			if(receivers.size()>1) {
+				tv.append(" Only the first will be called to match Market/Store/Finsky behaviour.");
+				i.setClassName(receivers.get(0).activityInfo.packageName,
+						receivers.get(0).activityInfo.name);
+			}
+			tv.append("\n");
+		}
+		sendBroadcast(i);
     }
     
     private boolean checkfield(String referrer, String field) {
@@ -122,20 +149,24 @@ public class Send extends BaseActivity {
     }
     
     private String generateReferrer() {
-    	StringBuilder sb = new StringBuilder();
-    	
-    	append(sb, campaignSource, "utm_source");
-    	sb.append("&");
-    	append(sb, campaignMedium, "utm_medium");
-    	sb.append("&");
-    	if(append(sb, campaignTerm, "utm_term")) {    		
-    		sb.append("&");
-    	}
-    	if(append(sb, campaignContent, "utm_content")) {
-    		sb.append("&");
-    	}
-    	append(sb, campaignName, "utm_campaign");
-		return sb.toString();
+		String ref = customRef.getText().toString();
+		if (TextUtils.isEmpty(ref)) {
+			StringBuilder sb = new StringBuilder();
+
+			append(sb, campaignSource, "utm_source");
+			sb.append("&");
+			append(sb, campaignMedium, "utm_medium");
+			sb.append("&");
+			if (append(sb, campaignTerm, "utm_term")) {
+				sb.append("&");
+			}
+			if (append(sb, campaignContent, "utm_content")) {
+				sb.append("&");
+			}
+			append(sb, campaignName, "utm_campaign");
+			return sb.toString();
+		}
+		return ref;
 	}
     
     private boolean append(StringBuilder sb, EditText edit, String parameter) {

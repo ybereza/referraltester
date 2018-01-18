@@ -9,7 +9,10 @@
     <EditText a:id="@+id/campaign_term" style="@style/FillHorizontaly" a:layout_margin="2dp" a:hint="Campaign Term" />
     <EditText a:id="@+id/campaign_content" style="@style/FillHorizontaly" a:layout_margin="2dp" a:hint="Campaign Content" />
     <EditText a:id="@+id/campaign_name" style="@style/FillHorizontaly" a:layout_margin="2dp" a:hint="Campaign Name*" />
-	<Button a:id="@+id/send" style="@style/FillHorizontaly" a:text="Send broadcast" />
+
+    <EditText a:id="@+id/custom" style="@style/FillHorizontaly" a:layout_margin="2dp" a:hint="Custom referer" a:lines="5"/>
+    <Button a:id="@+id/send" style="@style/FillHorizontaly" a:text="Send broadcast" />
+    <TextView a:id="@+id/status_info" style="@style/Fill" a:layout_margin="2dp" a:text="Press send to get status information here" />
 </LinearLayout>
 </ScrollView>
 </LinearLayout>
